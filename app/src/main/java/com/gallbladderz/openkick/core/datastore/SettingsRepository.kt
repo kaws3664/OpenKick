@@ -38,6 +38,7 @@ class SettingsRepository(private val context: Context) {
         private val CHAT_CHANNEL_BADGES = booleanPreferencesKey("chat_channel_badges")
         private val CHAT_OFFICIAL_NAME_COLOR = booleanPreferencesKey("chat_official_name_color")
         private val CHAT_ANIMATED_EMOTES = booleanPreferencesKey("chat_animated_emotes")
+        private val CHAT_DANMAKU_ENABLED = booleanPreferencesKey("chat_danmaku_enabled")
     }
 
     val chatSettingsFlow: Flow<ChatSettings> = context.dataStore.data.map { preferences ->
@@ -46,7 +47,8 @@ class SettingsRepository(private val context: Context) {
             showGlobalBadges = preferences[CHAT_GLOBAL_BADGES] ?: true,
             showChannelBadges = preferences[CHAT_CHANNEL_BADGES] ?: true,
             useOfficialNameColor = preferences[CHAT_OFFICIAL_NAME_COLOR] ?: true,
-            animatedEmotes = preferences[CHAT_ANIMATED_EMOTES] ?: true
+            animatedEmotes = preferences[CHAT_ANIMATED_EMOTES] ?: true,
+            danmakuEnabled = preferences[CHAT_DANMAKU_ENABLED] ?: false
         )
     }
 
@@ -57,6 +59,7 @@ class SettingsRepository(private val context: Context) {
             it[CHAT_CHANNEL_BADGES] = settings.showChannelBadges
             it[CHAT_OFFICIAL_NAME_COLOR] = settings.useOfficialNameColor
             it[CHAT_ANIMATED_EMOTES] = settings.animatedEmotes
+            it[CHAT_DANMAKU_ENABLED] = settings.danmakuEnabled
         }
     }
 
