@@ -36,8 +36,16 @@ private const val DENSITY_NORMAL_GAP_FACTOR = 0.3f  // 轨道复用：上一条�
 private const val DENSITY_MORE_GAP_FACTOR = 0.1f
 private const val DENSITY_OVERLAP_GAP_FACTOR = 0f
 private const val MAX_TRACKED = 200
+private const val MAX_SEEN = 5000  // 对齐 userscript 的 MAX_SEEN_MESSAGES
 
 private val EMOTE_TOKEN = Regex("\\[emote:\\d+:([^\\]]+)\\]")
+
+private data class Flying(
+    val key: String,
+    val text: String,
+    val lane: Int,
+    val startedAt: Long
+)
 
 /** Kick 的 emote 在 content 里是 [emote:ID:名字]，弹幕里显示成表情名字 */
 private fun danmakuText(content: String): String =
@@ -53,13 +61,10 @@ fun DanmakuOverlay(
     settings: ChatSettings,
     modifier: Modifier = Modifier
 ) {
-    var lastSeenCount by remember { mutableIntStateOf(0) }
-    data class Flying(
-        val key: String,
-        val text: String,
-        val lane: Int,
-        val startedAt: Long
-    )
+    // 按消息 ID 去重（对齐 userscript 的 MAX_SEEN_MESSAGES 方案）：
+    // 聊天列表是"新消息插头部"，重连重放/裁剪/重排都不应导致重播
+    val seenIds = remember { ArrayDeque<String>() }
+    val seenSet = remember { HashSet<String>() }
     val flying = remember { mutableStateListOf<Flying>() }
     val laneLastStart = remember { IntArray(16) { Int.MIN_VALUE } }
     val density = LocalDensity.current
@@ -71,33 +76,32 @@ fun DanmakuOverlay(
         else -> DENSITY_NORMAL_GAP_FACTOR
     }
     val laneCount = remember(settings.danmakuArea, settings.danmakuSize) {
-        // 行高 = 字号 × 1.5，轨道数由显示区域决定
         ((settings.danmakuArea / 100f) * 720f / (settings.danmakuSize * 1.5f)).toInt().coerceIn(2, 16)
     }
 
     LaunchedEffect(chatMessages) {
-        if (chatMessages.size < lastSeenCount) {
-            lastSeenCount = chatMessages.size
-            flying.clear()
-        }
-        if (chatMessages.size > lastSeenCount) {
-            val now = System.currentTimeMillis()
-            for (m in chatMessages.subList(lastSeenCount, chatMessages.size)) {
-                val text = danmakuText(m.content)
-                if (text.isEmpty() || m.isPending) continue
-                var lane = 0
-                var oldest = Long.MAX_VALUE
-                for (i in 0 until laneCount) {
-                    val last = laneLastStart[i].toLong()
-                    if (now - last >= (travelMs * gapFactor).toInt()) { lane = i; break }
-                    if (last < oldest) { oldest = last; lane = i }
-                }
-                laneLastStart[lane] = now.toInt()
-                flying.add(Flying(m.id, text, lane, now))
+        // 列表是头部插入、按新到旧排序；从尾往头扫 = 从旧到新，保证发射顺序正确
+        val toSpawn = chatMessages.asReversed().filter { it.id !in seenSet && !it.isPending }
+        for (m in toSpawn) {
+            seenSet.add(m.id)
+            seenIds.addLast(m.id)
+            while (seenIds.size > MAX_SEEN) {
+                seenSet.remove(seenIds.removeFirst())
             }
-            lastSeenCount = chatMessages.size
-            while (flying.size > MAX_TRACKED) flying.removeAt(0)
+            val text = danmakuText(m.content)
+            if (text.isEmpty()) continue
+            val now = System.currentTimeMillis()
+            var lane = 0
+            var oldest = Long.MAX_VALUE
+            for (i in 0 until laneCount) {
+                val last = laneLastStart[i].toLong()
+                if (now - last >= (travelMs * gapFactor).toInt()) { lane = i; break }
+                if (last < oldest) { oldest = last; lane = i }
+            }
+            laneLastStart[lane] = now.toInt()
+            flying.add(Flying(m.id, text, lane, now))
         }
+        while (flying.size > MAX_TRACKED) flying.removeAt(0)
     }
 
     LaunchedEffect(Unit) {
