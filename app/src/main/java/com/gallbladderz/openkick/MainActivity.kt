@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         handleAuthIntent(intent)
         handlePipAudioIntent(intent)
         lifecycleScope.launch {
+            runCatching { followingRepository.seedDefaultFollows() }
             combine(
                 sessionManager.mode,
                 sessionManager.sessionGeneration
