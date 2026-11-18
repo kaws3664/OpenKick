@@ -198,7 +198,7 @@ fun PlayerContent(
                         if (chatSettings.danmakuEnabled && !isInPipMode && fraction < 0.5f) {
                             DanmakuOverlay(
                                 chatMessages = chatMessages,
-                                chatSettings = chatSettings,
+                                settings = chatSettings,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
