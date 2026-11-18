@@ -138,6 +138,7 @@ fun LanguageSettingsScreen(
                         val currentLangText = when (appLanguage) {
                             "ru" -> stringResource(R.string.russian_lang)
                             "es" -> stringResource(R.string.language_spanish_native)
+                            "zh" -> stringResource(R.string.language_chinese_native)
                             else -> stringResource(R.string.english_lang)
                         }
                         Text(currentLangText)
@@ -212,6 +213,15 @@ fun LanguageSettingsScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+
+                LanguageOptionItem(
+                    title = stringResource(R.string.language_chinese_native),
+                    isSelected = appLanguage == "zh",
+                    onClick = {
+                        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("zh"))
+                        showLanguageSheet = false
+                    }
                 )
 
                 LanguageOptionItem(
