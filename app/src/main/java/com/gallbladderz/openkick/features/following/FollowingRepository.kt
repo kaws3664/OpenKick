@@ -10,6 +10,7 @@ import com.gallbladderz.openkick.core.auth.AppMode
 import com.gallbladderz.openkick.core.auth.SessionManager
 import com.gallbladderz.openkick.core.data.local.FollowType
 import com.gallbladderz.openkick.core.data.local.FollowedEntity
+import com.gallbladderz.openkick.core.datastore.SettingsRepository
 import com.gallbladderz.openkick.core.domain.toDomainError
 import com.gallbladderz.openkick.core.network.api.KickApiService
 import com.gallbladderz.openkick.core.network.dto.categories.CategoryDetailsResponse
@@ -29,7 +30,8 @@ class FollowingRepository(
     private val local: LocalFollowingDataSource,
     private val remote: RemoteFollowingDataSource,
     private val remoteCategories: RemoteCategoryFollowingDataSource,
-    private val session: SessionManager
+    private val session: SessionManager,
+    private val settingsRepository: SettingsRepository
 ) {
     private val refreshMutex = Mutex()
     private val categoryRefreshMutex = Mutex()
@@ -116,6 +118,37 @@ class FollowingRepository(
     val isAuthenticated: Boolean get() = session.mode.value == AppMode.AUTHENTICATED
 
     suspend fun saveLocalSnapshot(entity: FollowedEntity) = local.save(entity)
+
+    /** 首次启动时写入默认关注的频道（只在首次生效，用户取关后不会复活） */
+    suspend fun seedDefaultFollows() {
+        if (settingsRepository.defaultFollowsSeededFlow.first()) return
+        val defaults = listOf(
+            Triple(
+                "quin3614", "Quin3614",
+                "https://files.kick.com/images/user/120368189/profile_image/conversion/65cc6371-ff00-4077-9434-a614d585194d-fullsize.webp"
+            ),
+            Triple(
+                "czcjiaxu", "Czcjiaxu",
+                "https://files.kick.com/images/user/21083445/profile_image/conversion/06b1a4ed-16c3-47fb-8707-316edf390708-fullsize.webp"
+            )
+        )
+        val existing = local.streamers().first().map { it.slug }.toSet()
+        for ((slug, username, avatarUrl) in defaults) {
+            if (slug !in existing) {
+                local.save(
+                    FollowedEntity(
+                        slug = slug,
+                        type = FollowType.STREAMER,
+                        username = username,
+                        avatarUrl = avatarUrl
+                    )
+                )
+            }
+        }
+        setSeeded(true)
+    }
+
+    private suspend fun setSeeded(value: Boolean) = settingsRepository.setDefaultFollowsSeeded(value)
 
     suspend fun migrateLocalToRemote() {
         check(session.mode.value == AppMode.AUTHENTICATED) { "Sign in before migrating follows" }
