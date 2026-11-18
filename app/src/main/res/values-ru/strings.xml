@@ -27,7 +27,7 @@
     <string name="all_followed_arrow">Все отслеживаемые ➔</string>
     <string name="all_languages">Все языки</string>
     <string name="anonymous">Аноним</string>
-    <string name="app_name">OpenKick</string>
+    <string name="app_name">QuinKick</string>
     <string name="appearance">Внешний вид</string>
     <string name="application_language">Язык приложения</string>
     <string name="application_title">Приложение</string>
@@ -119,7 +119,7 @@
     <string name="description">Описание</string>
     <string name="disable">Отключить</string>
     <string name="donate">Пожертвовать 👉👈</string>
-    <string name="donate_description">Если OpenKick оказался полезен, проект можно поддержать.</string>
+    <string name="donate_description">Если QuinKick оказался полезен, проект можно поддержать.</string>
     <string name="done_desc">Готово</string>
     <string name="dynamic_colors">Динамические цвета</string>
     <string name="empty_follow_someone">Тут пусто. Иди подпишись на кого-нибудь!</string>
@@ -257,5 +257,5 @@
     <string name="welcome_guest_title">Автономный режим</string>
     <string name="welcome_sign_in">Войти</string>
     <string name="welcome_subtitle">Выбери, как пользоваться приложением.</string>
-    <string name="welcome_title">Добро пожаловать в OpenKick</string>
+    <string name="welcome_title">Добро пожаловать в QuinKick</string>
 </resources>
