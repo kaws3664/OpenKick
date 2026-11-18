@@ -59,6 +59,14 @@
     <string name="chat_animated_emotes_desc">在选择器和聊天中播放 Kick 动态表情</string>
     <string name="chat_danmaku">弹幕</string>
     <string name="chat_danmaku_desc">把聊天消息以滚动字幕的形式显示在视频画面上</string>
+    <string name="chat_danmaku_speed">速度：%1$d 秒/屏</string>
+    <string name="chat_danmaku_size">字号：%1$d</string>
+    <string name="chat_danmaku_opacity">不透明度：%1$d%%</string>
+    <string name="chat_danmaku_area">显示区域：%1$d%%</string>
+    <string name="chat_danmaku_density">密度</string>
+    <string name="chat_danmaku_density_normal">正常</string>
+    <string name="chat_danmaku_density_more">较多</string>
+    <string name="chat_danmaku_density_overlap">重叠</string>
     <string name="chat_empty">消息将显示在这里</string>
     <string name="chat_global_badges">Kick 徽章</string>
     <string name="chat_global_badges_desc">等级、房管、VIP、OG、创始人和机器人等全局身份</string>
