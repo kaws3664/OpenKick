@@ -59,6 +59,14 @@
     <string name="chat_animated_emotes_desc">Play animated Kick emotes in the picker and chat</string>
     <string name="chat_danmaku">Danmaku overlay</string>
     <string name="chat_danmaku_desc">Show chat messages as scrolling subtitles on the video</string>
+    <string name="chat_danmaku_speed">Speed: %1$d s per screen</string>
+    <string name="chat_danmaku_size">Font size: %1$d</string>
+    <string name="chat_danmaku_opacity">Opacity: %1$d%%</string>
+    <string name="chat_danmaku_area">Display area: %1$d%%</string>
+    <string name="chat_danmaku_density">Density</string>
+    <string name="chat_danmaku_density_normal">Normal</string>
+    <string name="chat_danmaku_density_more">Dense</string>
+    <string name="chat_danmaku_density_overlap">Overlap</string>
     <string name="chat_empty">Messages will appear here</string>
     <string name="chat_global_badges">Kick badges</string>
     <string name="chat_global_badges_desc">Global roles such as level, moderator, VIP, OG, founder and bot</string>
