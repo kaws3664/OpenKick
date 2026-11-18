@@ -26,10 +26,19 @@ android {
         buildConfigField("String", "KICK_CLIENT_ID", "\"${providers.gradleProperty("kickClientId").getOrElse("")}\"")
         buildConfigField("String", "KICK_REDIRECT_URI", "\"openkick://oauth/callback\"")
     }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
