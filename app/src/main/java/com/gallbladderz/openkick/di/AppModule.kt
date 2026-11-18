@@ -78,6 +78,7 @@ val appModule = module {
     single<OAuthManager> { OAuthManager(androidContext(), get<OAuthApi>(), get<SessionManager>()) }
     single<okhttp3.OkHttpClient>(named("authClient")) {
         okhttp3.OkHttpClient.Builder()
+            .dns(com.gallbladderz.openkick.core.network.SmartDns)
             .addInterceptor(AuthInterceptor(get<SessionManager>(), get<OAuthManager>()))
             .build()
     }
@@ -121,6 +122,7 @@ val appModule = module {
 
     single<okhttp3.OkHttpClient> {
         okhttp3.OkHttpClient.Builder()
+            .dns(com.gallbladderz.openkick.core.network.SmartDns)
             .addInterceptor(MobileHeadersInterceptor())
             .build()
     }
@@ -171,6 +173,7 @@ val appModule = module {
             .baseUrl(KickApiConstants.KICK_BASE_URL + "/")
             .client(
                 okhttp3.OkHttpClient.Builder()
+            .dns(com.gallbladderz.openkick.core.network.SmartDns)
                     .addInterceptor(AuthInterceptor(get<SessionManager>(), get<OAuthManager>()))
                     .addInterceptor(MobileHeadersInterceptor())
                     .build()
@@ -225,7 +228,8 @@ val appModule = module {
             get<LocalFollowingDataSource>(),
             get<RemoteFollowingDataSource>(),
             get<RemoteCategoryFollowingDataSource>(),
-            get<SessionManager>()
+            get<SessionManager>(),
+            get<SettingsRepository>()
         )
     }
     single<StreamerProfileRepository> {
