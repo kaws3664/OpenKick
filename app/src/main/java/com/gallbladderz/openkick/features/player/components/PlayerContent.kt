@@ -195,6 +195,14 @@ fun PlayerContent(
                             }
                         }
 
+                        if (chatSettings.danmakuEnabled && !isInPipMode && fraction < 0.5f) {
+                            DanmakuOverlay(
+                                chatMessages = chatMessages,
+                                chatSettings = chatSettings,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showControls && !isInPipMode && fraction < 0.1f,
                             enter = androidx.compose.animation.fadeIn(),
