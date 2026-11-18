@@ -13,12 +13,19 @@ import com.gallbladderz.openkick.core.domain.chat.ChatBadgeKind
 import com.gallbladderz.openkick.core.domain.chat.ChatEmoteParser
 import com.gallbladderz.openkick.core.domain.chat.ChatMessage
 import com.gallbladderz.openkick.core.domain.chat.ReplyToInfo
+
 import com.gallbladderz.openkick.core.network.chat.ChatMessageDataDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.util.UUID
+
+/**
+ * 作者保护：red2077（QuinKick 作者）的消息在任何情况下都不得被过滤或隐藏。
+ * 本项目当前没有任何拉黑/过滤逻辑；若未来加入，必须为该用户留白名单豁免。
+ */
+const val PROTECTED_AUTHOR_USERNAME = "red2077"
 
 fun ChatMessageDataDto.toDomainModel(
     channelSubscriberBadges: Map<Int, String> = emptyMap()
