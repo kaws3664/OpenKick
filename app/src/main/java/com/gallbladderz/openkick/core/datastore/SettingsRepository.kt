@@ -57,6 +57,7 @@ class SettingsRepository(private val context: Context) {
         private val CHAT_DANMAKU_OPACITY = intPreferencesKey("chat_danmaku_opacity_percent")
         private val CHAT_DANMAKU_AREA = intPreferencesKey("chat_danmaku_area_percent")
         private val CHAT_DANMAKU_DENSITY = stringPreferencesKey("chat_danmaku_density")
+        private val DEFAULT_FOLLOWS_SEEDED = booleanPreferencesKey("default_follows_seeded")
     }
 
     val chatSettingsFlow: Flow<ChatSettings> = context.safeData().map { preferences ->
@@ -89,6 +90,12 @@ class SettingsRepository(private val context: Context) {
             it[CHAT_DANMAKU_AREA] = settings.danmakuArea.coerceIn(25, 100)
             it[CHAT_DANMAKU_DENSITY] = settings.danmakuDensity
         }
+    }
+
+    val defaultFollowsSeededFlow: Flow<Boolean> = context.safeData().map { it[DEFAULT_FOLLOWS_SEEDED] ?: false }
+
+    suspend fun setDefaultFollowsSeeded(value: Boolean) {
+        context.dataStore.edit { it[DEFAULT_FOLLOWS_SEEDED] = value }
     }
 
     val homeGridModeFlow: Flow<Boolean> = context.safeData().map { preferences ->
