@@ -39,6 +39,11 @@ class SettingsRepository(private val context: Context) {
         private val CHAT_OFFICIAL_NAME_COLOR = booleanPreferencesKey("chat_official_name_color")
         private val CHAT_ANIMATED_EMOTES = booleanPreferencesKey("chat_animated_emotes")
         private val CHAT_DANMAKU_ENABLED = booleanPreferencesKey("chat_danmaku_enabled")
+        private val CHAT_DANMAKU_SPEED = intPreferencesKey("chat_danmaku_speed")
+        private val CHAT_DANMAKU_SIZE = intPreferencesKey("chat_danmaku_size")
+        private val CHAT_DANMAKU_OPACITY = intPreferencesKey("chat_danmaku_opacity_percent")
+        private val CHAT_DANMAKU_AREA = intPreferencesKey("chat_danmaku_area_percent")
+        private val CHAT_DANMAKU_DENSITY = stringPreferencesKey("chat_danmaku_density")
     }
 
     val chatSettingsFlow: Flow<ChatSettings> = context.dataStore.data.map { preferences ->
@@ -48,7 +53,12 @@ class SettingsRepository(private val context: Context) {
             showChannelBadges = preferences[CHAT_CHANNEL_BADGES] ?: true,
             useOfficialNameColor = preferences[CHAT_OFFICIAL_NAME_COLOR] ?: true,
             animatedEmotes = preferences[CHAT_ANIMATED_EMOTES] ?: true,
-            danmakuEnabled = preferences[CHAT_DANMAKU_ENABLED] ?: false
+            danmakuEnabled = preferences[CHAT_DANMAKU_ENABLED] ?: false,
+            danmakuSpeed = preferences[CHAT_DANMAKU_SPEED] ?: 10,
+            danmakuSize = preferences[CHAT_DANMAKU_SIZE] ?: 18,
+            danmakuOpacity = ((preferences[CHAT_DANMAKU_OPACITY] ?: 85) / 100f),
+            danmakuArea = preferences[CHAT_DANMAKU_AREA] ?: 100,
+            danmakuDensity = preferences[CHAT_DANMAKU_DENSITY] ?: "normal"
         )
     }
 
@@ -60,6 +70,11 @@ class SettingsRepository(private val context: Context) {
             it[CHAT_OFFICIAL_NAME_COLOR] = settings.useOfficialNameColor
             it[CHAT_ANIMATED_EMOTES] = settings.animatedEmotes
             it[CHAT_DANMAKU_ENABLED] = settings.danmakuEnabled
+            it[CHAT_DANMAKU_SPEED] = settings.danmakuSpeed.coerceIn(4, 20)
+            it[CHAT_DANMAKU_SIZE] = settings.danmakuSize.coerceIn(14, 38)
+            it[CHAT_DANMAKU_OPACITY] = (settings.danmakuOpacity * 100).toInt().coerceIn(20, 100)
+            it[CHAT_DANMAKU_AREA] = settings.danmakuArea.coerceIn(25, 100)
+            it[CHAT_DANMAKU_DENSITY] = settings.danmakuDensity
         }
     }
 
