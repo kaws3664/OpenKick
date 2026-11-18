@@ -14,11 +14,24 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.CorruptionException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import java.util.Locale
 
 val Context.dataStore by preferencesDataStore(name = "kick_settings")
+
+/**
+ * 容错读取：偏好文件损坏或 IO 异常时返回空偏好（各 flow 自动落到默认值），
+ * 避免坏数据导致应用启动即崩溃（曾有 release 包因旧数据损坏闪退）。
+ */
+private fun Context.safeData(): Flow<androidx.datastore.preferences.core.Preferences> =
+    dataStore.data.catch { e ->
+        if (e is CorruptionException || e is IOException) emit(androidx.datastore.preferences.core.emptyPreferences())
+        else throw e
+    }
 
 class SettingsRepository(private val context: Context) {
 
@@ -46,7 +59,7 @@ class SettingsRepository(private val context: Context) {
         private val CHAT_DANMAKU_DENSITY = stringPreferencesKey("chat_danmaku_density")
     }
 
-    val chatSettingsFlow: Flow<ChatSettings> = context.dataStore.data.map { preferences ->
+    val chatSettingsFlow: Flow<ChatSettings> = context.safeData().map { preferences ->
         ChatSettings(
             textScale = ((preferences[CHAT_TEXT_SCALE] ?: 100) / 100f).coerceIn(0.85f, 1.3f),
             showGlobalBadges = preferences[CHAT_GLOBAL_BADGES] ?: true,
@@ -78,7 +91,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val homeGridModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val homeGridModeFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[HOME_GRID_MODE] ?: false
     }
 
@@ -88,7 +101,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val homeStreamSortFlow: Flow<String> = context.dataStore.data.map { preferences ->
+    val homeStreamSortFlow: Flow<String> = context.safeData().map { preferences ->
         preferences[HOME_STREAM_SORT] ?: "viewer_count_desc"
     }
 
@@ -98,7 +111,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val appThemeFlow: Flow<AppTheme> = context.dataStore.data.map { preferences ->
+    val appThemeFlow: Flow<AppTheme> = context.safeData().map { preferences ->
         AppTheme.valueOf(preferences[APP_THEME] ?: AppTheme.DARK.name)
     }
 
@@ -108,7 +121,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val appAccentFlow: Flow<AppAccent> = context.dataStore.data.map { preferences ->
+    val appAccentFlow: Flow<AppAccent> = context.safeData().map { preferences ->
         val accentName = preferences[APP_ACCENT] ?: AppAccent.MAUVE.name
         try {
             AppAccent.valueOf(accentName)
@@ -123,7 +136,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val useDynamicColorsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val useDynamicColorsFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[USE_DYNAMIC_COLORS] ?: false
     }
 
@@ -133,7 +146,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val notificationsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val notificationsEnabledFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[NOTIFICATIONS_ENABLED] ?: true
     }
 
@@ -143,7 +156,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val hideSlotsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val hideSlotsFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[HIDE_SLOTS_KEY] ?: false
     }
 
@@ -153,7 +166,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val hidePoolsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val hidePoolsFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[HIDE_POOLS_KEY] ?: false
     }
 
@@ -163,7 +176,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    val hideCryptoFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val hideCryptoFlow: Flow<Boolean> = context.safeData().map { preferences ->
         preferences[HIDE_CRYPTO_KEY] ?: false
     }
 
@@ -174,7 +187,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     val selectedLanguagesFlow: Flow<Set<String>> =
-        context.dataStore.data.map { preferences ->
+        context.safeData().map { preferences ->
             preferences[SELECTED_LANGUAGES]
                 ?: setOf(Locale.getDefault().language)
         }
