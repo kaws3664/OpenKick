@@ -147,6 +147,12 @@ fun ChatSettingsSheet(
                 checked = settings.animatedEmotes,
                 onCheckedChange = { onSettingsChange(settings.copy(animatedEmotes = it)) }
             )
+            ChatSettingSwitch(
+                title = stringResource(R.string.chat_danmaku),
+                description = stringResource(R.string.chat_danmaku_desc),
+                checked = settings.danmakuEnabled,
+                onCheckedChange = { onSettingsChange(settings.copy(danmakuEnabled = it)) }
+            )
 
         }
     }
