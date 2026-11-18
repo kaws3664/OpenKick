@@ -27,7 +27,7 @@
     <string name="all_followed_arrow">All Followed ➔</string>
     <string name="all_languages">All languages</string>
     <string name="anonymous">Anonymous</string>
-    <string name="app_name">OpenKick</string>
+    <string name="app_name">QuinKick</string>
     <string name="appearance">Appearance</string>
     <string name="application_language">Application language</string>
     <string name="application_title">Application</string>
@@ -129,7 +129,7 @@
     <string name="description">Description</string>
     <string name="disable">Disable</string>
     <string name="donate">Donate 👉👈</string>
-    <string name="donate_description">If OpenKick helps you, you can support the project.</string>
+    <string name="donate_description">If QuinKick helps you, you can support the project.</string>
     <string name="done_desc">Done</string>
     <string name="dynamic_colors">Dynamic Colors</string>
     <string name="empty_follow_someone">It\'s empty here. Go follow someone!</string>
@@ -261,12 +261,12 @@
     <string name="welcome_account_title">With your Kick account</string>
     <string name="welcome_change_later">You can sign in later from Settings.</string>
     <string name="welcome_continue_guest">Continue</string>
-    <string name="welcome_guest_description">Use OpenKick without signing in.</string>
+    <string name="welcome_guest_description">Use QuinKick without signing in.</string>
     <string name="welcome_guest_feature_chat">Read live chat</string>
     <string name="welcome_guest_feature_following">Local channel follows</string>
     <string name="welcome_guest_feature_watch">Streams and clips</string>
     <string name="welcome_guest_title">Autonomous mode</string>
     <string name="welcome_sign_in">Sign in</string>
     <string name="welcome_subtitle">Choose how you want to watch Kick.</string>
-    <string name="welcome_title">Welcome to OpenKick</string>
+    <string name="welcome_title">Welcome to QuinKick</string>
 </resources>
