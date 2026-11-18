@@ -199,6 +199,7 @@ fun PlayerContent(
                             DanmakuOverlay(
                                 chatMessages = chatMessages,
                                 settings = chatSettings,
+                                isPlaying = playWhenReady && playbackState == androidx.media3.common.Player.STATE_READY,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
