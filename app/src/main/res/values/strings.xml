@@ -57,6 +57,8 @@
     <string name="chat_emoji_recent">Frequently used</string>
     <string name="chat_animated_emotes">Animated emotes</string>
     <string name="chat_animated_emotes_desc">Play animated Kick emotes in the picker and chat</string>
+    <string name="chat_danmaku">Danmaku overlay</string>
+    <string name="chat_danmaku_desc">Show chat messages as scrolling subtitles on the video</string>
     <string name="chat_empty">Messages will appear here</string>
     <string name="chat_global_badges">Kick badges</string>
     <string name="chat_global_badges_desc">Global roles such as level, moderator, VIP, OG, founder and bot</string>
