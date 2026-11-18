@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import com.gallbladderz.openkick.R
 import com.gallbladderz.openkick.core.datastore.ChatSettings
 
@@ -153,6 +155,74 @@ fun ChatSettingsSheet(
                 checked = settings.danmakuEnabled,
                 onCheckedChange = { onSettingsChange(settings.copy(danmakuEnabled = it)) }
             )
+
+            if (settings.danmakuEnabled) {
+                Text(
+                    text = stringResource(R.string.chat_danmaku_speed, settings.danmakuSpeed),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.danmakuSpeed.toFloat(),
+                    onValueChange = { onSettingsChange(settings.copy(danmakuSpeed = it.roundToInt())) },
+                    valueRange = 4f..20f,
+                    steps = 15
+                )
+                Text(
+                    text = stringResource(R.string.chat_danmaku_size, settings.danmakuSize),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.danmakuSize.toFloat(),
+                    onValueChange = { onSettingsChange(settings.copy(danmakuSize = it.roundToInt())) },
+                    valueRange = 14f..38f,
+                    steps = 23
+                )
+                Text(
+                    text = stringResource(
+                        R.string.chat_danmaku_opacity,
+                        (settings.danmakuOpacity * 100).roundToInt()
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.danmakuOpacity,
+                    onValueChange = { onSettingsChange(settings.copy(danmakuOpacity = it)) },
+                    valueRange = 0.2f..1f,
+                    steps = 15
+                )
+                Text(
+                    text = stringResource(R.string.chat_danmaku_area, settings.danmakuArea),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.danmakuArea.toFloat(),
+                    onValueChange = { onSettingsChange(settings.copy(danmakuArea = it.roundToInt())) },
+                    valueRange = 25f..100f,
+                    steps = 2
+                )
+                Text(
+                    text = stringResource(R.string.chat_danmaku_density),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        "normal" to stringResource(R.string.chat_danmaku_density_normal),
+                        "more" to stringResource(R.string.chat_danmaku_density_more),
+                        "overlap" to stringResource(R.string.chat_danmaku_density_overlap)
+                    ).forEach { (value, label) ->
+                        FilterChip(
+                            selected = settings.danmakuDensity == value,
+                            onClick = { onSettingsChange(settings.copy(danmakuDensity = value)) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+            }
 
         }
     }
