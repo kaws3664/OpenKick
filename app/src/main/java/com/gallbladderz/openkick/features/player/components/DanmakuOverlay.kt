@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,17 +20,26 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.gallbladderz.openkick.core.datastore.ChatSettings
+import com.gallbladderz.openkick.core.domain.chat.ChatEmoteParser
 import com.gallbladderz.openkick.core.domain.chat.ChatMessage
+import com.gallbladderz.openkick.core.domain.chat.ChatToken
 import kotlin.math.roundToInt
 
 // 参考 PiliPlus/PiliNara 的 canvas_danmaku 引擎算法（Compose 移植）
@@ -46,12 +57,65 @@ private fun danmakuText(content: String): String =
 private data class DanmakuItem(
     val id: String,
     val text: String,
+    val display: AnnotatedString,          // emote 渲染成图片的展示文本
+    val inline: Map<String, InlineTextContent>,
+    var count: Int,                        // 相同弹幕合并计数（PiliNara 风格 xN）
     val lane: Int,
-    val widthPx: Float,
+    var widthPx: Float,
     val spawnedAt: Long,   // 弹幕自身的时间线（毫秒，可暂停）
 )
 
-private data class Pending(val id: String, val text: String)
+private data class Pending(val id: String, val text: String, var count: Int = 1)
+
+/** emote → 展示文本（图片内联）+ 纯文本宽度基准 */
+private fun buildDanmakuVisual(
+    content: String,
+    repeatCount: Int,
+    fontSizeSp: Float
+): Triple<String, AnnotatedString, Map<String, InlineTextContent>> {
+    val plain = buildString {
+        ChatEmoteParser.parseEmotes(content).forEach { token ->
+            when (token) {
+                is ChatToken.Text -> append(token.text)
+                is ChatToken.Emote -> append(token.emoteName)
+            }
+        }
+        if (repeatCount > 1) append(" ×$repeatCount")
+    }.trim()
+    var annotated = AnnotatedString(plain)
+    val inline = mutableMapOf<String, InlineTextContent>()
+    if (content.contains("[emote:")) {
+        val builder = buildAnnotatedString {
+            ChatEmoteParser.parseEmotes(content).forEachIndexed { index, token ->
+                when (token) {
+                    is ChatToken.Text -> append(token.text)
+                    is ChatToken.Emote -> {
+                        val key = "dm_emote_${index}_${token.emoteId}"
+                        appendInlineContent(key, token.emoteName)
+                        inline[key] = InlineTextContent(
+                            Placeholder(fontSizeSp.sp, fontSizeSp.sp, PlaceholderVerticalAlign.TextCenter)
+                        ) {
+                            val ctx = androidx.compose.ui.platform.LocalContext.current
+                            AsyncImage(
+                                model = kickEmoteImageRequest(
+                                    context = ctx,
+                                    emoteId = token.emoteId,
+                                    animated = true
+                                ),
+                                contentDescription = token.emoteName,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+            }
+            if (repeatCount > 1) append(" ×$repeatCount")
+        }
+        annotated = builder
+    }
+    return Triple(plain, annotated, inline)
+}
 
 /**
  * 弹幕覆盖层（参考 PiliPlus/PiliNara 的 canvas_danmaku 引擎）：
@@ -104,10 +168,33 @@ fun DanmakuOverlay(
             textMeasurer.measure(text, textStyle, maxLines = 1).size.width.toFloat()
 
         fun addToLane(lane: Int, p: Pending, w: Float, now: Long) {
-            val item = DanmakuItem(p.id, p.text, lane, w, now)
+            val (plain, display, inline) = buildDanmakuVisual(p.text, p.count, fontSizeSp)
+            val item = DanmakuItem(p.id, p.text, display, inline, p.count, lane, w, now)
             laneLast[lane] = item
             active.add(item)
             Log.d(TAG, "spawn lane=$lane active=${active.size} queue=${pendingQueue.size} text=${p.text.take(12)}")
+        }
+
+        /** 相同弹幕合并：优先并入等待队列中最近的相同文本，其次并入正在飞行的相同弹幕（PiliNara xN 风格） */
+        fun mergeOrEnqueue(p: Pending): Boolean {
+            val lastPending = pendingQueue.lastOrNull { it.text == p.text }
+            if (lastPending != null) {
+                lastPending.count++
+                return true
+            }
+            val flying = active.lastOrNull { it.text == p.text } ?: return false
+            flying.count++
+            val (plain, display, inline) = buildDanmakuVisual(flying.text, flying.count, fontSizeSp)
+            val merged = flying.copy(
+                display = display, inline = inline, count = flying.count,
+                widthPx = measure(plain)
+            )
+            val idx = active.indexOf(flying)
+            if (idx >= 0) {
+                active[idx] = merged
+                laneLast.forEachIndexed { i, item -> if (item === flying) laneLast[i] = merged }
+            }
+            return true
         }
 
         /** 碰撞检测：轨道上上一条的右缘完全进入屏幕内才可上轨 */
@@ -192,7 +279,10 @@ fun DanmakuOverlay(
                 val text = danmakuText(m.content)
                 if (text.isEmpty()) continue
                 if (isBacklog) continue // 历史：只标记
-                if (pendingQueue.size < MAX_PENDING) pendingQueue.addLast(Pending(m.id, text))
+                val pending = Pending(m.id, text)
+                if (!mergeOrEnqueue(pending) && pendingQueue.size < MAX_PENDING) {
+                    pendingQueue.addLast(pending)
+                }
             }
             Log.d(TAG, "chat update size=${chatMessages.size} backlog=$isBacklog queue=${pendingQueue.size} seen=${seenSet.size}")
         }
@@ -200,7 +290,8 @@ fun DanmakuOverlay(
         active.forEach { d ->
             val x = (screenW - (timelineMs - d.spawnedAt).toFloat() / travelMs * (screenW + d.widthPx)).roundToInt()
             Text(
-                text = d.text,
+                text = d.display,
+                inlineContent = d.inline,
                 color = Color.White.copy(alpha = settings.danmakuOpacity),
                 style = textStyle,
                 maxLines = 1,

@@ -204,6 +204,15 @@ fun PlayerContent(
                             )
                         }
 
+                        if (isFullscreen && !isInPipMode) {
+                            PlayerGestureOverlay(
+                                player = player,
+                                isFullscreen = isFullscreen,
+                                onFullscreenToggle = onFullscreenToggle,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showControls && !isInPipMode && fraction < 0.1f,
                             enter = androidx.compose.animation.fadeIn(),

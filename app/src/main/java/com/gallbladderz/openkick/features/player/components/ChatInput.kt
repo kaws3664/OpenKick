@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
@@ -71,6 +72,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.OffsetMapping
@@ -312,17 +314,43 @@ fun ChatInput(
                 )
 
                 if (inputValue.text.isNotEmpty()) {
-                    Text(
-                        text = inputVisual.text,
-                        inlineContent = inputVisual.inlineContent,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colors.onSurface,
+                    val inputScroll = rememberScrollState()
+                    val inputMeasurer = rememberTextMeasurer()
+                    val inputStyle = MaterialTheme.typography.bodyMedium
+                    // 覆盖层是静态 Text，不会自己滚动：跟随光标，把光标附近滚进可视区
+                    LaunchedEffect(inputValue.selection.end, inputVisual) {
+                        val cursor = inputValue.selection.end.coerceIn(0, inputVisual.text.length)
+                        val prefixText = EmoteTokenVisualTransformation
+                            .filter(AnnotatedString(inputValue.text.substring(0, cursor)))
+                            .text
+                        val prefixWidth = if (cursor == 0) 0 else inputMeasurer.measure(
+                            prefixText,
+                            inputStyle,
+                            maxLines = 1,
+                            softWrap = false
+                        ).size.width
+                        val viewport = with(density) { (inputWidthPx - 116.dp.toPx()).coerceAtLeast(0f) }
+                        val target = with(density) { (prefixWidth - viewport + 24.dp.toPx()).toInt() }
+                            .coerceIn(0, inputScroll.maxValue)
+                        inputScroll.animateScrollTo(target)
+                    }
+                    Row(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
+                            .fillMaxWidth()
+                            .horizontalScroll(inputScroll, enabled = false)
                             .padding(start = 16.dp, end = 88.dp)
-                    )
+                    ) {
+                        Text(
+                            text = inputVisual.text,
+                            inlineContent = inputVisual.inlineContent,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                            softWrap = false,
+                            style = inputStyle,
+                            color = colors.onSurface
+                        )
+                    }
                 }
             }
         }
@@ -364,215 +392,3 @@ fun ChatInput(
         }
     }
 }
-
-private const val MAX_RECENT_EMOTES = 24
-private const val EMOTE_GRID_COLUMNS = 8
-
-@Composable
-private fun ChatEmotePickerPanel(
-    emoteSets: List<ChatEmoteSet>,
-    recentEmotes: List<ChatEmote>,
-    height: Dp,
-    animateEmotes: Boolean,
-    onEmoteSelected: (ChatEmote) -> Unit
-) {
-    val colors = MaterialTheme.colorScheme
-    val panelHeight = height.coerceIn(240.dp, 420.dp)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(panelHeight)
-            .background(colors.surface)
-    ) {
-        HorizontalDivider(color = colors.onSurface.copy(alpha = 0.08f))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            if (recentEmotes.isNotEmpty()) {
-                EmoteSection(
-                    title = stringResource(R.string.chat_emoji_recent),
-                    emotes = recentEmotes,
-                    animateEmotes = animateEmotes,
-                    onEmoteSelected = onEmoteSelected
-                )
-            }
-
-            if (emoteSets.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.chat_emoji_loading),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp)
-                )
-            } else {
-                emoteSets.forEach { set ->
-                    EmoteSection(
-                        title = set.name,
-                        emotes = set.emotes,
-                        animateEmotes = animateEmotes,
-                        onEmoteSelected = onEmoteSelected
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmoteSection(
-    title: String,
-    emotes: List<ChatEmote>,
-    animateEmotes: Boolean,
-    onEmoteSelected: (ChatEmote) -> Unit
-) {
-    val context = LocalContext.current
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 5.dp)
-    )
-    emotes.chunked(EMOTE_GRID_COLUMNS).forEach { rowEmotes ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
-        ) {
-            repeat(EMOTE_GRID_COLUMNS) { index ->
-                val emote = rowEmotes.getOrNull(index)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clickable(enabled = emote != null) {
-                            emote?.let(onEmoteSelected)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    emote?.let {
-                        AsyncImage(
-                            model = kickEmoteImageRequest(
-                                context = context,
-                                emoteId = it.id,
-                                animated = animateEmotes
-                            ),
-                            contentDescription = it.name,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private data class EmoteInputVisual(
-    val text: AnnotatedString,
-    val inlineContent: Map<String, InlineTextContent>
-)
-
-private fun buildEmoteInputVisual(
-    context: Context,
-    source: String,
-    animateEmotes: Boolean
-): EmoteInputVisual {
-    val inlineContent = mutableMapOf<String, InlineTextContent>()
-    val annotated = buildAnnotatedString {
-        ChatEmoteParser.parseEmotes(source).forEachIndexed { index, token ->
-            when (token) {
-                is com.gallbladderz.openkick.core.domain.chat.ChatToken.Text -> append(token.text)
-                is com.gallbladderz.openkick.core.domain.chat.ChatToken.Emote -> {
-                    val inlineId = "input_emote_${index}_${token.emoteId}"
-                    appendInlineContent(inlineId, token.emoteName)
-                    inlineContent[inlineId] = InlineTextContent(
-                        Placeholder(22.sp, 22.sp, PlaceholderVerticalAlign.TextCenter)
-                    ) {
-                        AsyncImage(
-                            model = kickEmoteImageRequest(
-                                context = context,
-                                emoteId = token.emoteId,
-                                animated = animateEmotes
-                            ),
-                            contentDescription = token.emoteName,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-    return EmoteInputVisual(annotated, inlineContent)
-}
-
-private object EmoteTokenVisualTransformation : VisualTransformation {
-    private val tokenRegex = Regex("\\[emote:(\\d+):([^\\]]+)\\]")
-
-    override fun filter(text: AnnotatedString): TransformedText {
-        val source = text.text
-        val originalToTransformed = IntArray(source.length + 1)
-        val transformedToOriginal = mutableListOf(0)
-        val transformed = buildAnnotatedString {
-            var originalIndex = 0
-            var transformedIndex = 0
-            tokenRegex.findAll(source).forEach { match ->
-                while (originalIndex < match.range.first) {
-                    originalToTransformed[originalIndex] = transformedIndex
-                    append(source[originalIndex])
-                    originalIndex++
-                    transformedIndex++
-                    transformedToOriginal += originalIndex
-                }
-                for (index in match.range) originalToTransformed[index] = transformedIndex
-                append("🙂")
-                transformedIndex++
-                transformedToOriginal += match.range.last + 1
-                originalIndex = match.range.last + 1
-                originalToTransformed[originalIndex] = transformedIndex
-            }
-            while (originalIndex < source.length) {
-                originalToTransformed[originalIndex] = transformedIndex
-                append(source[originalIndex])
-                originalIndex++
-                transformedIndex++
-                transformedToOriginal += originalIndex
-            }
-            originalToTransformed[source.length] = transformedIndex
-        }
-        val mapping = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int =
-                originalToTransformed[offset.coerceIn(0, source.length)]
-
-            override fun transformedToOriginal(offset: Int): Int =
-                transformedToOriginal[offset.coerceIn(0, transformedToOriginal.lastIndex)]
-        }
-        return TransformedText(transformed, mapping)
-    }
-}
-
-private fun appendEmote(current: String, emote: ChatEmote): String {
-    val token = "[emote:${emote.id}:${emote.name}]"
-    return if (current.isBlank()) token else "$current $token"
-}
-
-private val completeEmoteToken = Regex("\\[emote:\\d+:[^\\]]+\\]")
-private val incompleteEmoteToken = Regex("\\[emote:\\d+:[^\\]]*$")
-
-private fun normalizeEmoteEdit(previous: TextFieldValue, updated: TextFieldValue): TextFieldValue {
-    if (updated.text.length >= previous.text.length || !completeEmoteToken.containsMatchIn(previous.text)) {
-        return updated
-    }
-
-    val incomplete = incompleteEmoteToken.find(updated.text) ?: return updated
-    val cleanedText = updated.text.removeRange(incomplete.range.first, updated.text.length)
-    return updated.copy(
-        text = cleanedText,
-        selection = TextRange(cleanedText.length)
-    )
-}
-

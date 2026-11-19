@@ -69,15 +69,6 @@ fun CustomPlayerControls(
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
         ) {
-            if (isFullscreen && isLive) {
-                IconButton(onClick = onToggleChat) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Message,
-                        contentDescription = stringResource(R.string.toggle_chat_desc),
-                        tint = Color.White
-                    )
-                }
-            }
             IconButton(onClick = onSettings) {
                 Icon(
                     Icons.Default.Settings,
@@ -171,12 +162,25 @@ fun CustomPlayerControls(
                 }
             }
 
-            IconButton(onClick = onFullscreen, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                    contentDescription = stringResource(R.string.fullscreen_desc),
-                    tint = Color.White
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isFullscreen && isLive) {
+                    IconButton(onClick = onToggleChat) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Message,
+                            contentDescription = stringResource(R.string.toggle_chat_desc),
+                            tint = Color.White
+                        )
+                    }
+                }
+                IconButton(onClick = onFullscreen, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                        contentDescription = stringResource(R.string.fullscreen_desc),
+                        tint = Color.White
+                    )
+                }
             }
         }
     }
