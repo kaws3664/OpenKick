@@ -103,6 +103,8 @@
     <string name="chat_scroll_to_latest">滚动到最新消息</string>
     <string name="chat_send">发送消息</string>
     <string name="chat_send_failed">消息发送失败</string>
+    <string name="chat_message_too_long">已达到字数上限（%1$d 个字符），请删改后再发送</string>
+    <string name="reload_stream">重新加载视频</string>
     <string name="chat_settings_subtitle">调整聊天设置，阅读更舒适</string>
     <string name="chat_settings_title">聊天设置</string>
     <string name="chat_sign_in_hint">登录以使用聊天</string>

@@ -7,7 +7,6 @@ package com.gallbladderz.openkick.features.profile
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Card
@@ -48,7 +46,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,10 +71,8 @@ fun AboutAppScreen(
     onLicensesClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
     val versionName = packageInfo.versionName ?: stringResource(R.string.unknown_value)
-    val copiedText = stringResource(R.string.copied)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -177,42 +172,6 @@ fun AboutAppScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            AboutSectionTitle(title = stringResource(R.string.donate))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.donate_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                )
-                AppConfig.CRYPTO_WALLETS.forEachIndexed { index, (name, address) ->
-                    if (index > 0) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                    }
-                    AboutActionRow(
-                        icon = Icons.Default.ContentCopy,
-                        title = name,
-                        subtitle = address,
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(address))
-                            Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
-            }
             Spacer(Modifier.height(32.dp))
         }
     }

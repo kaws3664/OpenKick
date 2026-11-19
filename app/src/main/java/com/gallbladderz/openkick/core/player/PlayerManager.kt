@@ -186,6 +186,15 @@ class PlayerManager(
         player?.seekToDefaultPosition()
     }
 
+    /** 重新加载当前流：卡住时不用退出重进 */
+    fun reload() {
+        player?.let {
+            it.stop()
+            it.prepare()
+            it.playWhenReady = true
+        }
+    }
+
     fun play(
         videoUrl: String,
         title: String,

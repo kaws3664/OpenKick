@@ -91,98 +91,6 @@ import kotlinx.coroutines.sync.withLock
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
-@Composable
-fun PlayerRoute(
-    streamerName: String,
-    dragState: AnchoredDraggableState<PlayerExpandedState>,
-    onBackClick: () -> Unit,
-    onAvatarClick: (String) -> Unit = {},
-    onCategoryClick: (String) -> Unit = {},
-    viewModel: PlayerViewModel = koinViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
-    val chatSendState by viewModel.chatSendState.collectAsStateWithLifecycle()
-    val chatEmoteSets by viewModel.chatEmoteSets.collectAsStateWithLifecycle()
-    val chatMode by viewModel.chatMode.collectAsStateWithLifecycle()
-    val channelLinks by viewModel.channelLinks.collectAsStateWithLifecycle()
-    val isFollowed by viewModel.isStreamerFollowed(streamerName)
-        .collectAsStateWithLifecycle(initialValue = false)
-
-    val playWhenReady by viewModel.playerManager.playWhenReady.collectAsStateWithLifecycle()
-    val playbackState by viewModel.playerManager.playbackState.collectAsStateWithLifecycle()
-    val availableQualities by viewModel.availableQualities.collectAsStateWithLifecycle()
-    val selectedQuality by viewModel.selectedQuality.collectAsStateWithLifecycle()
-
-    val isAuthenticated by viewModel.isAuthenticated.collectAsStateWithLifecycle()
-    val settingsRepository: SettingsRepository = koinInject()
-    val chatSettings by settingsRepository.chatSettingsFlow.collectAsStateWithLifecycle(
-        initialValue = ChatSettings(),
-        lifecycle = LocalLifecycleOwner.current.lifecycle
-    )
-    val settingsScope = rememberCoroutineScope()
-    val settingsWriteMutex = remember { Mutex() }
-    var displayedChatSettings by remember { mutableStateOf(chatSettings) }
-
-    LaunchedEffect(chatSettings) { displayedChatSettings = chatSettings }
-
-    val closePlayer = {
-        viewModel.playerManager.release()
-        viewModel.disconnectChat()
-        onBackClick()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.playerManager.release()
-            viewModel.disconnectChat()
-        }
-    }
-
-    PlayerScreen(
-        streamerName = streamerName,
-        uiState = uiState,
-        dragState = dragState,
-        chatMessages = chatMessages,
-        chatSendState = chatSendState,
-        chatEmoteSets = chatEmoteSets,
-        chatMode = chatMode,
-        isAuthenticated = isAuthenticated,
-        chatSettings = displayedChatSettings,
-        channelLinks = channelLinks,
-        isFollowed = isFollowed,
-        playWhenReady = playWhenReady,
-        playbackState = playbackState,
-        availableQualities = availableQualities,
-        selectedQuality = selectedQuality,
-        player = viewModel.playerManager.player,
-        onLoadStreamInfo = { viewModel.loadStreamInfo(it) },
-        onLoadChannelLinks = { viewModel.loadChannelLinks(it) },
-        onPlayerManagerInitialize = { viewModel.playerManager.initializePlayer() },
-        onPlayerManagerPause = { viewModel.playerManager.pause() },
-        onPlayerManagerResume = { viewModel.playerManager.resume() },
-        onPlayerManagerRelease = {
-            viewModel.playerManager.release()
-            viewModel.disconnectChat()
-        },
-        onToggleFollow = { streamer, followed -> viewModel.toggleFollow(streamer, followed) },
-        onSetVideoQuality = { viewModel.setVideoQuality(it) },
-        onBackClick = closePlayer,
-        onAvatarClick = onAvatarClick,
-        onCategoryClick = { slug -> onCategoryClick(slug) },
-        onSeekToLiveEdge = { viewModel.playerManager.seekToLiveEdge() },
-        onSendChatMessage = { content, replyTo -> viewModel.sendChatMessage(content, replyTo) },
-        onChatSettingsChange = { updated ->
-            displayedChatSettings = updated
-            settingsScope.launch {
-                settingsWriteMutex.withLock {
-                    settingsRepository.setChatSettings(updated)
-                }
-            }
-        }
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
@@ -207,6 +115,7 @@ fun PlayerScreen(
     onPlayerManagerInitialize: () -> Unit,
     onPlayerManagerPause: () -> Unit,
     onPlayerManagerResume: () -> Unit,
+    onReloadStream: () -> Unit = {},
     onPlayerManagerRelease: () -> Unit,
     onToggleFollow: (String, Boolean) -> Unit,
     onSetVideoQuality: (VideoQuality) -> Unit,
@@ -475,6 +384,7 @@ fun PlayerScreen(
                         isChatExpanded = false
                         playerInteractionTick++
                     },
+                    onReload = onReloadStream,
                     playWhenReady = playWhenReady,
                     playbackState = playbackState,
                     isAtLiveEdge = isAtLiveEdge,

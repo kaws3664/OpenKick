@@ -59,7 +59,31 @@ class FollowingRepository(
                     )
                 }
             }
-        } else local.entities()
+        } else local.entities().map { list ->
+            // 登录过再登出：本地记录已被 migrateLocalToRemote 清空，seed 标记又拦着重种
+            // → 未登录且本地为空时补上默认推荐账号
+            if (list.isEmpty()) defaultFollowEntities() else list
+        }
+    }
+
+    companion object {
+        /** 默认推荐关注的频道（未登录时关注页至少显示这两个） */
+        private val defaultFollowEntities = {
+            listOf(
+                FollowedEntity(
+                    slug = "quin3614",
+                    type = FollowType.STREAMER,
+                    username = "Quin3614",
+                    avatarUrl = "https://files.kick.com/images/user/120368189/profile_image/conversion/65cc6371-ff00-4077-9434-a614d585194d-fullsize.webp"
+                ),
+                FollowedEntity(
+                    slug = "czcjiaxu",
+                    type = FollowType.STREAMER,
+                    username = "Czcjiaxu",
+                    avatarUrl = "https://files.kick.com/images/user/21083445/profile_image/conversion/06b1a4ed-16c3-47fb-8707-316edf390708-fullsize.webp"
+                )
+            )
+        }
     }
 
     fun isStreamerFollowed(slug: String): Flow<Boolean> = followedEntities().map { entities ->

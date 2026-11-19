@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ fun CustomPlayerControls(
     onToggleChat: () -> Unit = {},
     currentSpeed: Float = 1f,
     onCycleSpeed: (() -> Unit)? = null,
+    onReload: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.background(Color.Black.copy(alpha = 0.6f))) {
@@ -71,6 +73,15 @@ fun CustomPlayerControls(
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
         ) {
+            if (onReload != null) {
+                IconButton(onClick = onReload) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.reload_stream),
+                        tint = Color.White
+                    )
+                }
+            }
             IconButton(onClick = onSettings) {
                 Icon(
                     Icons.Default.Settings,

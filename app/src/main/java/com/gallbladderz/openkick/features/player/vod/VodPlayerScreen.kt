@@ -368,6 +368,7 @@ fun VodPlayerScreen(
                                     },
                                     onFullscreen = { isFullscreen = !isFullscreen },
                                     onSettings = { showSettingsSheet = true },
+                                    onReload = { exoPlayer.let { it.stop(); it.prepare(); it.playWhenReady = true } },
                                     currentSpeed = playbackSpeed,
                                     onCycleSpeed = {
                                         playbackSpeed = when (playbackSpeed) {

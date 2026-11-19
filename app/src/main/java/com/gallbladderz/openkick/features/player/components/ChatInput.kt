@@ -9,11 +9,6 @@ package com.gallbladderz.openkick.features.player.components
 
 
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -91,6 +86,9 @@ import com.gallbladderz.openkick.core.domain.chat.ChatEmoteSet
 import com.gallbladderz.openkick.core.domain.chat.ChatMessage
 import com.gallbladderz.openkick.features.player.ChatSendState
 
+/** Kick 聊天消息长度上限 */
+private const val MAX_CHAT_MESSAGE_LENGTH = 120
+
 @Composable
 fun ChatInput(
     replyToMessage: ChatMessage?,
@@ -110,6 +108,10 @@ fun ChatInput(
     var emoteUsage by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var emojiPanelHeight by remember { mutableStateOf(300.dp) }
     var inputWidthPx by remember { mutableStateOf(0) }
+    var inputFocused by remember { mutableStateOf(false) }
+    // 发送结果处理：成功才清空输入框，失败/超限保留内容
+    var awaitingSendResult by remember { mutableStateOf(false) }
+    var overLimitError by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
@@ -117,6 +119,7 @@ fun ChatInput(
     var imeWasVisible by remember { mutableStateOf(imeHeight > 0.dp) }
     val isSending = chatSendState is ChatSendState.Sending
     val messageText = inputValue.text
+    val overLimit = messageText.length > MAX_CHAT_MESSAGE_LENGTH
     val canSend = isEnabled && !isSending && messageText.isNotBlank()
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -137,8 +140,32 @@ fun ChatInput(
 
     fun send() {
         if (!canSend) return
+        if (overLimit) {
+            overLimitError = true
+            return
+        }
+        overLimitError = false
+        awaitingSendResult = true
         onSendMessage(messageText.trim(), replyToMessage)
-        inputValue = TextFieldValue()
+    }
+
+    // 发送成功（回到 Idle）才清空输入框；失败保留内容让用户改后再发
+    LaunchedEffect(chatSendState) {
+        when (chatSendState) {
+            is ChatSendState.Idle -> if (awaitingSendResult) {
+                awaitingSendResult = false
+                inputValue = TextFieldValue()
+            }
+            is ChatSendState.Error -> {
+                awaitingSendResult = false
+                overLimitError = false
+            }
+            else -> {}
+        }
+    }
+
+    LaunchedEffect(inputValue.text) {
+        if (messageText.length <= MAX_CHAT_MESSAGE_LENGTH) overLimitError = false
     }
 
     Column(
@@ -148,56 +175,11 @@ fun ChatInput(
     ) {
         HorizontalDivider(color = colors.onSurface.copy(alpha = 0.08f))
 
-        AnimatedVisibility(
+        ChatReplyBanner(
             visible = replyToMessage != null,
-            enter = slideInVertically() + fadeIn(),
-            exit = slideOutVertically() + fadeOut()
-        ) {
-            replyToMessage?.let { reply ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, top = 8.dp)
-                        .background(
-                            colors.surfaceVariant.copy(alpha = 0.55f),
-                            RoundedCornerShape(10.dp)
-                        )
-                        .padding(start = 9.dp, end = 3.dp, top = 5.dp, bottom = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .size(width = 3.dp, height = 32.dp)
-                            .background(colors.primary, RoundedCornerShape(2.dp))
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.chat_reply_to, reply.sender),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = reply.content,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    IconButton(onClick = onClearReply, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.chat_cancel_reply),
-                            tint = colors.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-        }
+            reply = replyToMessage,
+            onClearReply = onClearReply
+        )
 
         Row(
             modifier = Modifier
@@ -233,6 +215,7 @@ fun ChatInput(
                             }
                         }
                         .onFocusChanged { focusState ->
+                            inputFocused = focusState.isFocused
                             if (focusState.isFocused && emojiMenuExpanded) {
                                 emojiMenuExpanded = false
                             }
@@ -240,7 +223,10 @@ fun ChatInput(
                     enabled = !isSending,
                     readOnly = !isEnabled,
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.Transparent),
+                    // 编辑时显示真实文本（点击定位光标与所见表一致）；失焦后由覆盖层渲染表情图片
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (inputFocused) colors.onSurface else Color.Transparent
+                    ),
                     visualTransformation = EmoteTokenVisualTransformation,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
@@ -295,10 +281,19 @@ fun ChatInput(
                                         contentDescription = stringResource(
                                             if (canSend) R.string.chat_send else R.string.chat_settings_title
                                         ),
-                                        tint = if (canSend) colors.primary else colors.onSurfaceVariant,
+                                        tint = if (overLimit) colors.error
+                                        else if (canSend) colors.primary
+                                        else colors.onSurfaceVariant,
                                         modifier = Modifier.size(23.dp)
                                     )
                                 }
+                            }
+                            if (messageText.length > 90) {
+                                Text(
+                                    text = "${messageText.length}/${MAX_CHAT_MESSAGE_LENGTH}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (overLimit) colors.error else colors.onSurfaceVariant
+                                )
                             }
                         }
                     },
@@ -313,7 +308,7 @@ fun ChatInput(
                     )
                 )
 
-                if (inputValue.text.isNotEmpty()) {
+                if (inputValue.text.isNotEmpty() && !inputFocused) {
                     val inputScroll = rememberScrollState()
                     val inputMeasurer = rememberTextMeasurer()
                     val inputStyle = MaterialTheme.typography.bodyMedium
@@ -379,6 +374,15 @@ fun ChatInput(
                         )
                         .take(MAX_RECENT_EMOTES)
                 }
+            )
+        }
+
+        if (overLimitError) {
+            Text(
+                text = stringResource(R.string.chat_message_too_long, MAX_CHAT_MESSAGE_LENGTH),
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.error,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             )
         }
 

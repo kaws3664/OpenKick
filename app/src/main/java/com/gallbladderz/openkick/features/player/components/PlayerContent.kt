@@ -89,7 +89,8 @@ fun PlayerContent(
     onChatSettingsClick: () -> Unit = {},
     onProfileClick: (String) -> Unit = {},
     isChatExpanded: Boolean = false,
-    onPlayerInteraction: () -> Unit = {}
+    onPlayerInteraction: () -> Unit = {},
+    onReload: (() -> Unit)? = null
 ) {
     val configuration = LocalConfiguration.current
 
@@ -230,7 +231,8 @@ fun PlayerContent(
                                 onFullscreenToggle = onFullscreenToggle,
                                 onShowSettings = onShowSettings,
                                 onBackClick = onBackClick,
-                                onToggleChat = { isLandscapeChatOpen = !isLandscapeChatOpen }
+                                onToggleChat = { isLandscapeChatOpen = !isLandscapeChatOpen },
+                                onReload = onReload
                             )
                         }
 

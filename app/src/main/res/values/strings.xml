@@ -103,6 +103,8 @@
     <string name="chat_scroll_to_latest">Scroll to latest messages</string>
     <string name="chat_send">Send message</string>
     <string name="chat_send_failed">Could not send message</string>
+    <string name="chat_message_too_long">Message limit reached (%1$d characters). Trim your message and try again.</string>
+    <string name="reload_stream">Reload stream</string>
     <string name="chat_settings_subtitle">Tune the chat for comfortable reading</string>
     <string name="chat_settings_title">Chat settings</string>
     <string name="chat_sign_in_hint">Sign in to chat</string>
