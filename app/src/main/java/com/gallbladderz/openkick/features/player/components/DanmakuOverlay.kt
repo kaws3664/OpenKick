@@ -57,6 +57,7 @@ private fun danmakuText(content: String): String =
 private data class DanmakuItem(
     val id: String,
     val text: String,
+    val raw: String,                       // 原始 content（emote token），合并时重建展示文本用
     val display: AnnotatedString,          // emote 渲染成图片的展示文本
     val inline: Map<String, InlineTextContent>,
     var count: Int,                        // 相同弹幕合并计数（PiliNara 风格 xN）
@@ -65,7 +66,12 @@ private data class DanmakuItem(
     val spawnedAt: Long,   // 弹幕自身的时间线（毫秒，可暂停）
 )
 
-private data class Pending(val id: String, val text: String, var count: Int = 1)
+private data class Pending(
+    val id: String,
+    val raw: String,   // 原始 content（含 [emote:ID:名] token，渲染表情图片用）
+    val text: String,  // 纯文本（合并比较 + 宽度测量）
+    var count: Int = 1
+)
 
 /** emote → 展示文本（图片内联）+ 纯文本宽度基准 */
 private fun buildDanmakuVisual(
@@ -169,8 +175,8 @@ fun DanmakuOverlay(
             textMeasurer.measure(text, textStyle, maxLines = 1).size.width.toFloat()
 
         fun addToLane(lane: Int, p: Pending, w: Float, now: Long) {
-            val (plain, display, inline) = buildDanmakuVisual(p.text, p.count, fontSizeSp)
-            val item = DanmakuItem(p.id, p.text, display, inline, p.count, lane, w, now)
+            val (plain, display, inline) = buildDanmakuVisual(p.raw, p.count, fontSizeSp)
+            val item = DanmakuItem(p.id, p.text, p.raw, display, inline, p.count, lane, w, now)
             laneLast[lane] = item
             active.add(item)
             Log.d(TAG, "spawn lane=$lane active=${active.size} queue=${pendingQueue.size} text=${p.text.take(12)}")
@@ -185,7 +191,7 @@ fun DanmakuOverlay(
             }
             val flying = active.lastOrNull { it.text == p.text } ?: return false
             flying.count++
-            val (plain, display, inline) = buildDanmakuVisual(flying.text, flying.count, fontSizeSp)
+            val (plain, display, inline) = buildDanmakuVisual(flying.raw, flying.count, fontSizeSp)
             val merged = flying.copy(
                 display = display, inline = inline, count = flying.count,
                 widthPx = measure(plain)
@@ -280,7 +286,7 @@ fun DanmakuOverlay(
                 val text = danmakuText(m.content)
                 if (text.isEmpty()) continue
                 if (isBacklog) continue // 历史：只标记
-                val pending = Pending(m.id, text)
+                val pending = Pending(m.id, m.content, text)
                 if (!mergeOrEnqueue(pending) && pendingQueue.size < MAX_PENDING) {
                     pendingQueue.addLast(pending)
                 }
