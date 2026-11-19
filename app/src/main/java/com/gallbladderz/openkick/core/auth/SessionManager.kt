@@ -6,10 +6,12 @@
 package com.gallbladderz.openkick.core.auth
 
 import android.content.Context
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 
 enum class AppMode { UNDECIDED, AUTONOMOUS, AUTHENTICATED }
 
@@ -18,7 +20,28 @@ data class OAuthTokens(val accessToken: String, val refreshToken: String, val ex
 data class AccountIdentity(val username: String, val avatarUrl: String, val profileSlug: String)
 
 class SessionManager(context: Context) {
-    private val preferences = EncryptedSharedPreferences.create(
+    // EncryptedSharedPreferences 的 keyset 偶发损坏（进程被杀/存储压力/系统升级）会让
+    // create() 每次启动都抛 AEADBadTagException/GeneralSecurityException，导致 App 无法打开。
+    // 自愈：删除损坏的 prefs + masterkey 文件后重建（代价是重新登录）。
+    private val preferences = try {
+        createPrefs(context)
+    } catch (t: Throwable) {
+        Log.w(TAG, "session prefs corrupted, resetting: $t")
+        listOf("openkick_session", "openkick_session.xml", "openkick_session.backup",
+            "openkick_session.parameters", "__androidx_security_crypto_encrypted_prefs__")
+            .forEach { name ->
+                context.deleteSharedPreferences(name.replace(".xml", ""))
+                File(context.filesDir.parentFile, "shared_prefs/$name").delete()
+            }
+        File(context.filesDir.parentFile, "datastore/__androidx_security_crypto_encrypted_prefs__.preferences_pb").delete()
+        try {
+            java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                .deleteEntry("_androidx_security_master_key_")
+        } catch (_: Exception) {}
+        createPrefs(context)
+    }
+
+    private fun createPrefs(context: Context) = EncryptedSharedPreferences.create(
         context,
         "openkick_session",
         MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
@@ -186,5 +209,6 @@ class SessionManager(context: Context) {
         private const val ACCOUNT_SLUG = "account_slug"
         private const val PENDING_VERIFIER = "pending_pkce_verifier"
         private const val PENDING_STATE = "pending_oauth_state"
+        private const val TAG = "SessionManager"
     }
 }

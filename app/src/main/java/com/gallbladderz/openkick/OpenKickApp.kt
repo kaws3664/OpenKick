@@ -25,12 +25,14 @@ import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.startKoin
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 class OpenKickApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
 
+        setupCrashLog()
         startKoin {
             androidContext(this@OpenKickApp)
             workManagerFactory()
@@ -38,6 +40,26 @@ class OpenKickApp : Application(), ImageLoaderFactory {
         }
 
         setupStreamNotifications()
+    }
+
+    /** 未捕获异常写入外部私有目录 logs/，文件管理器可取：Android/data/<pkg>/files/logs/ */
+    private fun setupCrashLog() {
+        val dir = getExternalFilesDir("logs") ?: return
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val file = File(dir, "crash-${System.currentTimeMillis()}.txt")
+                file.writeText(
+                    "App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n" +
+                        "Device: ${Build.MANUFACTURER} ${Build.MODEL} Android ${Build.VERSION.RELEASE}\n" +
+                        "Thread: ${thread.name}\n\n" +
+                        android.util.Log.getStackTraceString(throwable)
+                )
+                // 只保留最近 5 份
+                dir.listFiles()?.sortedByDescending { it.name }?.drop(5)?.forEach { it.delete() }
+            } catch (_: Throwable) {}
+            previous?.uncaughtException(thread, throwable)
+        }
     }
 
     private fun setupStreamNotifications() {
