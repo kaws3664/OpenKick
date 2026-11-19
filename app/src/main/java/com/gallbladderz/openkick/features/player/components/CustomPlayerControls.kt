@@ -60,6 +60,8 @@ fun CustomPlayerControls(
     onFullscreen: () -> Unit,
     onSettings: () -> Unit,
     onToggleChat: () -> Unit = {},
+    currentSpeed: Float = 1f,
+    onCycleSpeed: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.background(Color.Black.copy(alpha = 0.6f))) {
@@ -165,6 +167,17 @@ fun CustomPlayerControls(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (!isLive && onCycleSpeed != null) {
+                    // PiliNara 风格倍速：点击循环切换，长按不支持
+                    IconButton(onClick = onCycleSpeed, modifier = Modifier.width(56.dp)) {
+                        Text(
+                            text = "%.1fx".format(currentSpeed),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 if (isFullscreen && isLive) {
                     IconButton(onClick = onToggleChat) {
                         Icon(

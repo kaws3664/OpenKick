@@ -24,6 +24,7 @@ import com.gallbladderz.openkick.core.network.api.CategoryFollowingApi
 import com.gallbladderz.openkick.core.network.api.ChatEmotesApi
 import com.gallbladderz.openkick.core.network.api.ChatSendApi
 import com.gallbladderz.openkick.core.network.api.FollowingApi
+import com.gallbladderz.openkick.core.network.api.VodChatApi
 import com.gallbladderz.openkick.core.network.api.KickApiService
 import com.gallbladderz.openkick.core.network.api.OAuthApi
 import com.gallbladderz.openkick.core.network.api.RealtimeApi
@@ -167,6 +168,15 @@ val appModule = module {
             .build().create(ChatSendApi::class.java)
     }
 
+    single<VodChatApi> {
+        val json = Json { ignoreUnknownKeys = true }
+        Retrofit.Builder()
+            .baseUrl(KickApiConstants.KICK_BASE_URL + "/")
+            .client(get<okhttp3.OkHttpClient>(named("authClient")))
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build().create(VodChatApi::class.java)
+    }
+
     single<ChatEmotesApi> {
         val json = Json { ignoreUnknownKeys = true }
         Retrofit.Builder()
@@ -299,7 +309,8 @@ val appModule = module {
             videoId = videoId,
             context = androidContext(),
             dataSourceFactory = get(),
-            repository = get()
+            repository = get(),
+            vodChatApi = get()
         )
     }
 }

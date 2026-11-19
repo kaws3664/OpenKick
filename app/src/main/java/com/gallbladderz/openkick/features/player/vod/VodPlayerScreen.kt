@@ -41,6 +41,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,6 +63,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import com.gallbladderz.openkick.R
+import com.gallbladderz.openkick.core.datastore.ChatSettings
 import com.gallbladderz.openkick.core.player.LocalGlobalPlayerController
 import com.gallbladderz.openkick.core.player.VideoQuality
 import com.gallbladderz.openkick.core.ui.utils.DeviceOrientation
@@ -68,7 +71,9 @@ import com.gallbladderz.openkick.core.ui.utils.findActivity
 import com.gallbladderz.openkick.core.ui.utils.rememberDeviceOrientation
 import com.gallbladderz.openkick.features.player.components.ClipInfoPanel
 import com.gallbladderz.openkick.features.player.components.CustomPlayerControls
+import com.gallbladderz.openkick.features.player.components.DanmakuOverlay
 import com.gallbladderz.openkick.features.player.components.KickStreamPlayer
+import com.gallbladderz.openkick.features.player.components.PlayerGestureOverlay
 import com.gallbladderz.openkick.features.player.components.QualitySelectionSheet
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
@@ -88,6 +93,7 @@ fun VodPlayerRoute(
 
     val viewModel: VodPlayerViewModel = koinViewModel(parameters = { parametersOf(videoId) })
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val chatItems by viewModel.chatItems.collectAsStateWithLifecycle()
 
     DisposableEffect(videoId) {
         onDispose { viewModel.playerManager.release() }
@@ -97,6 +103,8 @@ fun VodPlayerRoute(
         uiState = uiState,
         videoId = videoId,
         exoPlayer = viewModel.playerManager.player,
+        chatItems = chatItems,
+        onPlaybackPosition = { viewModel.ensureChatLoaded(it) },
         onBackClick = {
             viewModel.playerManager.release()
             onBackClick()
@@ -110,6 +118,8 @@ fun VodPlayerScreen(
     uiState: VodPlayerUiState,
     videoId: String,
     exoPlayer: Player?,
+    chatItems: List<VodChatItem> = emptyList(),
+    onPlaybackPosition: (Long) -> Unit = {},
     onBackClick: () -> Unit,
     onStreamerClick: (String) -> Unit
 ) {
@@ -133,6 +143,13 @@ fun VodPlayerScreen(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var availableQualities by remember { mutableStateOf<List<VideoQuality>>(emptyList()) }
     var selectedQuality by remember { mutableStateOf<VideoQuality?>(null) }
+
+    // VOD 弹幕回放 + 倍速
+    val chatSettings by remember { mutableStateOf(ChatSettings()) }
+    var playbackSpeed by remember { mutableFloatStateOf(1f) }
+    LaunchedEffect(playbackSpeed) {
+        exoPlayer?.setPlaybackSpeed(playbackSpeed)
+    }
 
     fun setQuality(quality: VideoQuality) {
         selectedQuality = quality
@@ -203,6 +220,7 @@ fun VodPlayerScreen(
         while (isPlaying && playbackState == Player.STATE_READY) {
             currentPosition = exoPlayer?.currentPosition ?: 0L
             duration = exoPlayer?.duration?.coerceAtLeast(0L) ?: 0L
+            onPlaybackPosition(currentPosition)
             delay(500)
         }
     }
@@ -302,6 +320,31 @@ fun VodPlayerScreen(
                     if (exoPlayer != null) {
                         KickStreamPlayer(player = exoPlayer, modifier = Modifier.fillMaxSize())
 
+                        if (chatSettings.danmakuEnabled) {
+                            // VOD 弹幕：VM 按播放位置增量拉取聊天回放，这里按位置放行
+                            val visibleChat = remember(chatItems, currentPosition) {
+                                chatItems
+                                    .filter { it.offsetMs <= currentPosition }
+                                    .map { it.message }
+                            }
+                            DanmakuOverlay(
+                                chatMessages = visibleChat,
+                                settings = chatSettings,
+                                isPlaying = isPlaying && playbackState == Player.STATE_READY,
+                                isReplay = true,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        if (isFullscreen) {
+                            PlayerGestureOverlay(
+                                player = exoPlayer,
+                                isFullscreen = isFullscreen,
+                                onFullscreenToggle = { isFullscreen = !isFullscreen },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showControls,
                             enter = fadeIn(),
@@ -325,6 +368,17 @@ fun VodPlayerScreen(
                                     },
                                     onFullscreen = { isFullscreen = !isFullscreen },
                                     onSettings = { showSettingsSheet = true },
+                                    currentSpeed = playbackSpeed,
+                                    onCycleSpeed = {
+                                        playbackSpeed = when (playbackSpeed) {
+                                            1f -> 1.25f
+                                            1.25f -> 1.5f
+                                            1.5f -> 2f
+                                            2f -> 0.5f
+                                            0.5f -> 0.75f
+                                            else -> 1f
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxSize()
                                 )
                                 IconButton(

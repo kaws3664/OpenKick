@@ -104,7 +104,7 @@ fun PlayerGestureOverlay(
                             val window = (view.context as? Activity)?.window ?: return@detectVerticalDragGestures
                             val current = window.attributes.screenBrightness
                             val base = if (current == WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) 0.5f else current
-                            val next = (base + dy / size.height).coerceIn(0f, 1f)
+                            val next = (base - dy / size.height).coerceIn(0f, 1f)
                             window.attributes = window.attributes.apply {
                                 screenBrightness = next
                             }

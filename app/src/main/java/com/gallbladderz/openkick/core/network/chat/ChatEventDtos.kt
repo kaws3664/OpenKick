@@ -19,7 +19,9 @@ data class PusherEventDto(
 data class ChatMessageDataDto(
     val id: String? = null,
     val chatroom_id: Long? = null,
+    val created_at: String? = null,
     val sender: ChatSenderDto? = null,
+    val user: ChatSenderDto? = null,
     val content: String? = null,
     val type: String? = null,
     val metadata: JsonElement? = null,

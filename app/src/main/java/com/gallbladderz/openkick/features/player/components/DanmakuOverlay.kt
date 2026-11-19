@@ -129,14 +129,15 @@ fun DanmakuOverlay(
     chatMessages: List<ChatMessage>,
     settings: ChatSettings,
     isPlaying: Boolean,
+    isReplay: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // 按消息 ID 去重（userscript MAX_SEEN_MESSAGES 方案）
     val seenIds = remember { ArrayDeque<String>() }
     val seenSet = remember { HashSet<String>() }
     val pendingQueue = remember { ArrayDeque<Pending>() }
-    // 首次收到非空列表 = 进入直播间灌入的历史，只标记不发射
-    var backlogConsumed by remember { mutableStateOf(false) }
+    // 首次收到非空列表 = 进入直播间灌入的历史，只标记不发射；回放无历史灌入，第一条就要发
+    var backlogConsumed by remember(isReplay) { mutableStateOf(isReplay) }
 
     val active = remember { mutableStateListOf<DanmakuItem>() }
     val laneLast = remember { arrayOfNulls<DanmakuItem>(16) }
